@@ -1,5 +1,5 @@
 import { ContextProvider } from "@/contextprovider/ContextProvider";
-import { Helmet } from "react-helmet";
+import Head from "next/head";
 import "@/styles/globals.css";
 import { League_Spartan } from "next/font/google";
 
@@ -12,6 +12,12 @@ export const leaguSpartan = League_Spartan({
 export default function App({ Component, pageProps }) {
   return (
     <>
+      <Head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="shortcut icon" href="/assets/favicon-32x32.png" />
+        <title>Space Tourism</title>
+    </Head>
       <ContextProvider>
         <div className={` ${leaguSpartan} font-leagu-spartan text-[30px] md:text-[32px]`}>
           <Component {...pageProps} />
