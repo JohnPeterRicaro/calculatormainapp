@@ -13,7 +13,7 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <ContextProvider>
-        <div className={` ${leaguSpartan} font-leagu-spartan text-[32px]`}>
+        <div className={` ${leaguSpartan} font-leagu-spartan text-[30px] md:text-[32px]`}>
           <Component {...pageProps} />
         </div>
       </ContextProvider>

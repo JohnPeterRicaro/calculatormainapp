@@ -1,7 +1,7 @@
 
 const CircleToggle = ({toggleCircle}) => {
     return (
-        <div className={`absolute h-[18px] w-[18px] rounded-full ${toggleCircle} transition ease-linear duration-100`}></div>
+        <div className={`absolute rounded-full w-[15px] h-[15px] ${toggleCircle} transition ease-linear duration-100 md:h-[18px] md:w-[18px]` }></div>
     )
 }
 
