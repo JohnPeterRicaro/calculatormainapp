@@ -1,118 +1,727 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import CircleToggle from "@/components/ToggleCircle.jsx";
+import { useStateContext } from "@/contextprovider/ContextProvider";
+import { useEffect, useReducer } from "react";
+import BodyClassName from "react-body-classname";
+import DigitButton from "@/components/DigitButton";
+import OperationButton from "@/components/OperationButton";
 
-const inter = Inter({ subsets: ['latin'] })
+export const ACTIONS = {
+  ADD_DIGITS: "add-digit",
+  CHOOSE_OPERATION: "choose-operation",
+  RESET: "reset",
+  DELETE_DIGIT: "delete-digit",
+  EQUALS: "equals",
+};
 
-export default function Home() {
+const evaluate = ({ currentOperand, previousOperand, operation }) => {
+  const prev = parseFloat(previousOperand);
+  const curr = parseFloat(currentOperand);
+  if (isNaN(prev) || isNaN(curr)) return "";
+  let computation = "";
+  switch (operation) {
+    case "+":
+      computation = prev + curr;
+      break;
+    case "-":
+      computation = prev - curr;
+      break;
+    case "/":
+      computation = prev / curr;
+      break
+    case "*":
+      computation = prev * curr;
+      break;
+  }
+
+  return computation.toString()
+};
+
+const stateOperations = (state, { type, payload }) => {
+  switch (type) {
+    case ACTIONS.ADD_DIGITS:
+      if(state.overwrite) return {...state, currentOperand: payload.digit, overwrite: false,}
+      if (payload.digit === "0" && state.currentOperand === "0") return state;
+      if (payload.digit === "." && state.currentOperand.includes("."))
+        return state;
+      return {
+        ...state,
+        currentOperand: `${state.currentOperand || ""}${payload.digit}`,
+      };
+    case ACTIONS.RESET:
+      return {};
+    case ACTIONS.CHOOSE_OPERATION:
+      if (state.currentOperand == null && state.previousOperand == null) return state;
+      if(state.currentOperand == null) return {...state, operation: payload.operation,}
+      if (state.previousOperand == null) {
+        return {
+          ...state,
+          operation: payload.operation,
+          previousOperand: state.currentOperand,
+          currentOperand: null,
+        };
+      }
+      return {
+        ...state,
+        previousOperand: evaluate(state),
+        operation: payload.operation,
+        currentOperand: null,
+      };
+    case ACTIONS.EQUALS:
+      if(state.operation === null || state.currentOperand === null || state.previousOperand === null) return state
+      return {
+        ...state, 
+        previousOperand: null,
+        operation: null,
+        currentOperand: evaluate(state),
+      }
+    case ACTIONS.DELETE_DIGIT: 
+    if(state.overwrite) return {...state, overwrite: false, currentOperand: null}
+    if(state.currentOperand == null) return state
+    if(state.currentOperand.length === 1) return {...state, currentOperand: null,}
+    return {...state, currentOperand: state.currentOperand.slice(0,-1)}
+    default:
+      return state;
+  }
+};
+
+const INTEGER_FORMAT = new Intl.NumberFormat("en-us", {
+  maximumFractionDigits: 0,
+})
+
+const formatOperands = (operand) => {
+  if(operand == null) return
+  const [integer, decimal] = operand.split(".")
+  if(decimal == null) return INTEGER_FORMAT.format(integer)
+  return `${INTEGER_FORMAT.format(integer)}.${decimal}`
+}
+
+const Home = () => {
+  const { isTheme, setIsTheme } = useStateContext();
+
+  const onValueChange = (event) => {
+    setIsTheme(event.target.value);
+  };
+
+  const theme1 = "-translate-x-[30px] bg-redkeybgtggl";
+  const theme2 = "translate-x-[0px] bg-orange-key";
+  const theme3 = " translate-x-[30px] bg-pure-cyan";
+
+  const key1 =
+    " bg-lightgrayishorangekeybg group-hover:bg-lightgrayishorangekey-hover";
+  const key1Shadow = " bg-grayishorangekeyshadow";
+  const key2 =
+    " bg-light-grayish-yellow group-hover:bg-light-grayish-yellow-hover";
+  const key2Shadow = "bg-dark-grayish-orange";
+  const key3 = " bg-very-dark-violet group-hover:bg-very-dark-violet-hover";
+  const key3Shadow = " bg-dark-magenta";
+
+  const [{ currentOperand, previousOperand, operation }, dispatch] = useReducer(
+    stateOperations,
+    {}
+  );
+
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+    <BodyClassName
+      className={` ${
+        isTheme === "theme-one"
+          ? "bg-verydarkdesaturatedblue-main"
+          : isTheme === "theme-two"
+          ? "bg-lightgray-mainbg"
+          : isTheme === "theme-three"
+          ? "bg-very-dark-violet-main"
+          : "bg-verydarkdesaturatedblue-main"
+      } transition ease-out`}
     >
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <div
+        className={`w-[375px] mx-auto md:w-[1440px] md:h-screen flex justify-center items-center transition ease-linear ${
+          isTheme === "theme-one"
+            ? "text-white"
+            : isTheme === "theme-two"
+            ? "text-very-dark-grayish-yellow"
+            : isTheme === "theme-three"
+            ? " text-light-yellow"
+            : "text-white"
+        }`}
+      >
+        <div className="mx-auto w-[540px] space-y-[24px]">
+          <div className="space-y-[4px]">
+            <div className="w-full text-[14px] font-bold flex justify-end items-center gap-[24px] -translate-x-[12px]">
+              <h4>1</h4>
+              <h4>2</h4>
+              <h4>3</h4>
+            </div>
+            <div className="flex justify-between items-center">
+              <h3 className=" text-3xl font-bold">calc</h3>
+              <div className=" flex justify-center items-center gap-[26px]">
+                <h3 className=" text-[12px] font-bold">THEME</h3>
+                <form
+                  className={`relative p-[9px] rounded-full flex justify-center items-center gap-[12px] ${
+                    isTheme === "theme-one"
+                      ? "bg-verydarkdesaturatedblue-tggl-bg"
+                      : isTheme === "theme-two"
+                      ? "bg-grayish-red"
+                      : isTheme === "theme-three"
+                      ? "bg-very-dark-violet-screen"
+                      : "bg-verydarkdesaturatedblue-tggl-bg"
+                  }`}
+                  onSubmit={(event) => event.preventDefault()}
+                >
+                  <CircleToggle
+                    toggleCircle={
+                      isTheme === "theme-one"
+                        ? theme1
+                        : isTheme === "theme-two"
+                        ? theme2
+                        : isTheme === "theme-three"
+                        ? theme3
+                        : theme1
+                    }
+                  />
+                  <input
+                    className="z-10 opacity-0 h-[18px] w-[18px] cursor-pointer"
+                    type="radio"
+                    value={"theme-one"}
+                    checked={isTheme === "theme-one"}
+                    onChange={onValueChange}
+                  />
+                  <input
+                    className="z-10 opacity-0 h-[18px] w-[18px] cursor-pointer"
+                    type="radio"
+                    value={"theme-two"}
+                    checked={isTheme === "theme-two"}
+                    onChange={onValueChange}
+                  />
+                  <input
+                    className="z-10 opacity-0 h-[18px] w-[18px] cursor-pointer"
+                    type="radio"
+                    value={"theme-three"}
+                    checked={isTheme === "theme-three"}
+                    onChange={onValueChange}
+                    onClick={(e) => setIsTheme(e.target.value)}
+                  />
+                </form>
+              </div>
+            </div>
+          </div>
+          <div
+            className={`w-full h-[110px] rounded-xl ${
+              isTheme === "theme-one"
+                ? "bg-verydarkdesaturatedblue-scrn"
+                : isTheme === "theme-two"
+                ? "bg-very-light-gray text-very-dark-grayish-yellow"
+                : isTheme === "theme-three"
+                ? "bg-very-dark-violet-screen text-light-yellow"
+                : "bg-verydarkdesaturatedblue-scrn"
+            } p-[24px] text-5xl font-bold flex flex-col justify-start items-end`}
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            <div>
+              <div
+                className={`${
+                  isTheme === "theme-one"
+                    ? "text-white opacity-70"
+                    : isTheme === "theme-two"
+                    ? "text-very-dark-grayish-yellow opacity-70"
+                    : isTheme === "theme-three"
+                    ? "text-light-yellow opacity-70"
+                    : "text-white"
+                } text-base w-full flex justify-end items-center`}
+              >
+                {formatOperands(previousOperand)} {operation}
+              </div>
+              <div>{formatOperands(currentOperand)}</div>
+            </div>
+          </div>
+          <div
+            className={`w-full p-[28px] font-black ${
+              isTheme === "theme-one"
+                ? "bg-verydarkdesaturatedblue-tggl-bg text-very-dark-grayish-blue"
+                : isTheme === "theme-two"
+                ? "bg-grayish-red text-very-dark-grayish-yellow"
+                : isTheme === "theme-three"
+                ? "bg-very-dark-violet-screen text-light-yellow"
+                : "bg-verydarkdesaturatedblue-tggl-bg"
+            } rounded-xl flex justify-center items-center flex-wrap gap-[28px]`}
+          >
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={7}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={8}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={9}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <button
+                onClick={() => dispatch({type: ACTIONS.DELETE_DIGIT})}
+                className={`z-10 w-full h-full rounded-lg text-white flex justify-center items-center  transition ease-in ${
+                  isTheme === "theme-one"
+                    ? "bg-desaturateddarkbluebg group-hover:bg-desaturateddarkblue-hover"
+                    : isTheme === "theme-two"
+                    ? "bg-dark-moderate-cyan group-hover:bg-dark-moderate-cyan-hover"
+                    : isTheme === "theme-three"
+                    ? "bg-dark-violet group-hover:bg-dark-violet-hover"
+                    : "bg-desaturateddarkbluebg group-hover:bg-desaturateddarkblue-hover"
+                }`}
+              >
+                DEL
+              </button>
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? "bg-desaturateddarkblueshadow"
+                    : isTheme === "theme-two"
+                    ? "bg-very-dark-cyan"
+                    : isTheme === "theme-three"
+                    ? "bg-vivid-magenta"
+                    : " bg-desaturateddarkblueshadow"
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={4}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={5}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={6}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <OperationButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                operation="+"
+                child="+"
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={1}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={2}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={3}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <OperationButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                operation="-"
+                child="-"
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit="."
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <DigitButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                digit={0}
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <OperationButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                operation="/"
+                child="/"
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[100px] h-[60px] flex justify-center items-center group">
+              <OperationButton
+                dispatch={dispatch}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? key1
+                    : isTheme === "theme-two"
+                    ? key2
+                    : isTheme === "theme-three"
+                    ? key3
+                    : key1
+                }`}
+                operation="*"
+                child="X"
+              />
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? key1Shadow
+                    : isTheme === "theme-two"
+                    ? key2Shadow
+                    : isTheme === "theme-three"
+                    ? key3Shadow
+                    : key1Shadow
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[47%] h-[60px] flex justify-center items-center group">
+              <button
+                onClick={() => dispatch({ type: ACTIONS.RESET })}
+                className={`z-10 w-full h-full rounded-lg text-white flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? "bg-desaturateddarkbluebg group-hover:bg-desaturateddarkblue-hover"
+                    : isTheme === "theme-two"
+                    ? " bg-dark-moderate-cyan group-hover:bg-dark-moderate-cyan-hover"
+                    : isTheme === "theme-three"
+                    ? " bg-dark-violet group-hover:bg-dark-violet-hover"
+                    : "bg-desaturateddarkbluebg group-hover:bg-desaturateddarkblue-hover"
+                }`}
+              >
+                RESET
+              </button>
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? "bg-desaturateddarkblueshadow"
+                    : isTheme === "theme-two"
+                    ? " bg-very-dark-cyan"
+                    : isTheme === "theme-three"
+                    ? "bg-dark-magenta"
+                    : "bg-desaturateddarkblueshadow"
+                }`}
+              ></div>
+            </div>
+            <div className="relative w-[47%] h-[60px] flex justify-center items-center group">
+              <button
+                onClick={() => dispatch({type: ACTIONS.EQUALS})}
+                className={`z-10 w-full h-full rounded-lg flex justify-center items-center transition ease-in ${
+                  isTheme === "theme-one"
+                    ? "bg-redkeybgtggl group-hover:bg-redkeybgtggl-hover text-white"
+                    : isTheme === "theme-two"
+                    ? "bg-orange-key group-hover:bg-orange-key-hover text-white"
+                    : isTheme === "theme-three"
+                    ? "bg-pure-cyan group-hover:bg-pure-cyan-hover text-very-dark-grayish-yellow"
+                    : "bg-redkeybgtggl group-hover:bg-redkeybgtggl-hover text-white"
+                }`}
+              >
+                =
+              </button>
+              <div
+                className={`absolute w-full h-full rounded-lg translate-y-[4px] ${
+                  isTheme === "theme-one"
+                    ? "bg-darkredkeyshadow"
+                    : isTheme === "theme-two"
+                    ? "bg-dark-orange"
+                    : isTheme === "theme-three"
+                    ? "bg-soft-cyan"
+                    : "bg-darkredkeyshadow"
+                }`}
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
+    </BodyClassName>
+  );
+};
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
-}
+export default Home;
